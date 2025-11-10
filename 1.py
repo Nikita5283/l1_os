@@ -1,8 +1,8 @@
 import ctypes  # встроенный модуль для вызова функций из DLL (WinAPI)
-import platform  # модуль для информации о платформе (node, architecture); используется ниже
+import platform  # модуль для информации о платформе
 from ctypes import wintypes  # импорт типов данных Windows API (DWORD, WCHAR, HANDLE и т.д.)
 
-# === 1. Получение версии Windows через RtlGetVersion ===
+# 1. Получение версии Windows через RtlGetVersion
 
 # Определяем структуру RTL_OSVERSIONINFOW, как в C (LayoutKind.Sequential)
 class RTL_OSVERSIONINFOW(ctypes.Structure):
@@ -20,14 +20,14 @@ RtlGetVersion.argtypes = [ctypes.POINTER(RTL_OSVERSIONINFOW)]  # функция 
 RtlGetVersion.restype = wintypes.DWORD  # возвращаемый тип — DWORD (0 обычно означает успех)
 
 def get_windows_version():
-    """Возвращает строку с версией ОС"""  # docstring для функции
+    """Возвращает строку с версией ОС"""
     info = RTL_OSVERSIONINFOW()  # создаём экземпляр структуры для заполнения
     info.dwOSVersionInfoSize = ctypes.sizeof(info)  # записываем размер структуры (требование API)
     RtlGetVersion(ctypes.byref(info))  # вызываем функцию, которая заполнит структуру info
     return f"Windows {info.dwMajorVersion}.{info.dwMinorVersion} (Build {info.dwBuildNumber})"  # форматируем строку версии
 
 
-# === 2. Информация о памяти через GlobalMemoryStatusEx ===
+# 2. Информация о памяти через GlobalMemoryStatusEx
 
 class MEMORYSTATUSEX(ctypes.Structure):
     _fields_ = [
@@ -42,19 +42,36 @@ class MEMORYSTATUSEX(ctypes.Structure):
         ("ullAvailExtendedVirtual", ctypes.c_ulonglong),  # зарезервировано (обычно 0)
     ]
 
+'''
+Получаем ссылку на функцию WinAPI GlobalMemoryStatusEx из библиотеки kernel32.dll через объект ctypes.windll
+После этой привязки GlobalMemoryStatusEx в Python становится вызываемой функцией, которая при вызове выполнит соответствующую функцию в системной библиотеке.
+'''
 GlobalMemoryStatusEx = ctypes.windll.kernel32.GlobalMemoryStatusEx
+
+'''
+Устанавливаем атрибут argtypes — это список типов аргументов, которые ожидает функция.
+В данном случае указываем, что функция принимает один аргумент: указатель на структуру MEMORYSTATUSEX. ctypes.POINTER(MEMORYSTATUSEX) даёт ctypes информацию о том, как конвертировать/проверять передаваемый аргумент при вызове из Python (например, при вызове GlobalMemoryStatusEx(ctypes.byref(mem))).
+Правильная настройка argtypes помогает избежать ошибок маршалинга данных и позволяет ctypes автоматически преобразовать переданные объекты в нужный C-тип.
+'''
 GlobalMemoryStatusEx.argtypes = [ctypes.POINTER(MEMORYSTATUSEX)]
+
+'''
+Устанавливаем restype — тип возвращаемого значения функции. Здесь это wintypes.BOOL (обычно 0 — FALSE, ненулевое — TRUE).
+По умолчанию ctypes трактует возвращаемое значение как C int. Явное указание restype гарантирует, что возвращаемое значение будет правильно интерпретировано (и, при необходимости, преобразовано в Python-тип).
+Это важно, если вы планируете проверять успешность вызова (например, if not GlobalMemoryStatusEx(...):), или если функция возвращает указатель/структуру — тогда restype должен быть соответствующим (например, ctypes.c_void_p или указатель на структуру).
+'''
 GlobalMemoryStatusEx.restype = wintypes.BOOL
 
+
 def get_memory_info():
-    """Возвращает информацию о памяти (RAM и виртуальная память)"""  # docstring
+    """Возвращает информацию о памяти (RAM и виртуальная память)"""
     mem = MEMORYSTATUSEX()  # создаём структуру для заполнения
     mem.dwLength = ctypes.sizeof(mem)  # указываем её размер
     GlobalMemoryStatusEx(ctypes.byref(mem))  # вызываем WinAPI для заполнения полей структуры
     return mem  # возвращаем заполненную структуру
 
 
-# === 3. Информация о файле подкачки через GetPerformanceInfo ===
+# 3. Информация о файле подкачки через GetPerformanceInfo
 
 class PERFORMANCE_INFORMATION(ctypes.Structure):
     _fields_ = [
@@ -88,7 +105,7 @@ def get_pagefile_info():
     return used_mb, limit_mb  # возвращаем кортеж (использовано, лимит) в МБ
 
 
-# === 4. Информация о логических дисках через GetLogicalDriveStrings и GetDiskFreeSpaceEx ===
+# 4. Информация о логических дисках через GetLogicalDriveStrings и GetDiskFreeSpaceEx
 
 GetLogicalDriveStringsW = ctypes.windll.kernel32.GetLogicalDriveStringsW
 GetLogicalDriveStringsW.argtypes = [wintypes.DWORD, wintypes.LPWSTR]
@@ -119,7 +136,7 @@ def get_drives():
     return result  # возвращаем список дисков
 
 
-# === 5. Основная функция ===
+# 5. Основная функция
 
 def main():
     print("=== System Information (Win32 API via ctypes) ===\n")  # заголовок вывода
