@@ -1,10 +1,10 @@
-import ctypes  # встроенный модуль для вызова функций из DLL (WinAPI)
+import ctypes  # модуль для вызова функций из DLL
 import platform  # модуль для информации о платформе
 from ctypes import wintypes  # импорт типов данных Windows API (DWORD, WCHAR, HANDLE и т.д.)
 
 # 1. Получение версии Windows через RtlGetVersion
 
-# Определяем структуру RTL_OSVERSIONINFOW, как в C (LayoutKind.Sequential)
+# Определяем структуру RTL_OSVERSIONINFOW, как в C
 class RTL_OSVERSIONINFOW(ctypes.Structure):
     _fields_ = [
         ("dwOSVersionInfoSize", wintypes.DWORD),  # размер структуры (нужно заполнить перед вызовом)
@@ -14,10 +14,9 @@ class RTL_OSVERSIONINFOW(ctypes.Structure):
         ("szCSDVersion", wintypes.WCHAR * 128)    # строка CSD (Service Pack или доп.инфо)
     ]
 
-# Загружаем библиотеку ntdll.dll и объявляем RtlGetVersion
-RtlGetVersion = ctypes.WinDLL("ntdll").RtlGetVersion  # получаем функцию RtlGetVersion из ntdll.dll
+RtlGetVersion = ctypes.WinDLL("ntdll").RtlGetVersion  # получаем функцию RtlGetVersion из библиотеки ntdll.dll
 RtlGetVersion.argtypes = [ctypes.POINTER(RTL_OSVERSIONINFOW)]  # функция принимает указатель на нашу структуру
-RtlGetVersion.restype = wintypes.DWORD  # возвращаемый тип — DWORD (0 обычно означает успех)
+RtlGetVersion.restype = wintypes.DWORD  # указываем возвращаемый тип — DWORD (32-битное целое)
 
 def get_windows_version():
     """Возвращает строку с версией ОС"""
@@ -42,11 +41,8 @@ class MEMORYSTATUSEX(ctypes.Structure):
         ("ullAvailExtendedVirtual", ctypes.c_ulonglong),  # зарезервировано (обычно 0)
     ]
 
-'''
-Получаем ссылку на функцию WinAPI GlobalMemoryStatusEx из библиотеки kernel32.dll через объект ctypes.windll
-После этой привязки GlobalMemoryStatusEx в Python становится вызываемой функцией, которая при вызове выполнит соответствующую функцию в системной библиотеке.
-'''
-GlobalMemoryStatusEx = ctypes.windll.kernel32.GlobalMemoryStatusEx
+
+GlobalMemoryStatusEx = ctypes.windll.kernel32.GlobalMemoryStatusEx # Получаем ссылку на функцию WinAPI GlobalMemoryStatusEx из библиотеки kernel32.dll
 
 '''
 Устанавливаем атрибут argtypes — это список типов аргументов, которые ожидает функция.
@@ -96,7 +92,7 @@ GetPerformanceInfo.argtypes = [ctypes.POINTER(PERFORMANCE_INFORMATION), wintypes
 GetPerformanceInfo.restype = wintypes.BOOL
 
 def get_pagefile_info():
-    """Возвращает информацию о файле подкачки"""  # docstring
+    """Возвращает информацию о файле подкачки"""
     perf = PERFORMANCE_INFORMATION()  # создаём структуру для заполнения
     perf.cb = ctypes.sizeof(perf)  # указываем её размер
     GetPerformanceInfo(ctypes.byref(perf), perf.cb)  # заполняем структуру данными производительности
@@ -135,11 +131,35 @@ def get_drives():
         result.append((d, free.value, total.value))  # добавляем кортеж (буква, свободно, всего) в байтах
     return result  # возвращаем список дисков
 
+# 5. Информация о процессорах
+
+class SYSTEM_INFO(ctypes.Structure):
+    _fields_ = [
+        ("wProcessorArchitecture", wintypes.WORD),
+        ("wReserved", wintypes.WORD),
+        ("dwPageSize", wintypes.DWORD),
+        ("lpMinimumApplicationAddress", wintypes.LPVOID),
+        ("lpMaximumApplicationAddress", wintypes.LPVOID),
+        ("dwActiveProcessorMask", ctypes.POINTER(ctypes.c_ulong)),
+        ("dwNumberOfProcessors", wintypes.DWORD),
+        ("dwProcessorType", wintypes.DWORD),
+        ("dwAllocationGranularity", wintypes.DWORD),
+        ("wProcessorLevel", wintypes.WORD),
+        ("wProcessorRevision", wintypes.WORD)
+    ]
+
+GetSystemInfo = ctypes.windll.kernel32.GetSystemInfo
+GetSystemInfo.argtypes = [ctypes.POINTER(SYSTEM_INFO)]
+
+def get_cpu_count():
+    info = SYSTEM_INFO()
+    GetSystemInfo(ctypes.byref(info))
+    return info.dwNumberOfProcessors
+
 
 # 5. Основная функция
 
 def main():
-    print("=== System Information (Win32 API via ctypes) ===\n")  # заголовок вывода
 
     # ОС
     print("OS:", get_windows_version())  # печатаем строку версии ОС
@@ -158,7 +178,7 @@ def main():
     print(f"Pagefile: {used_pf}MB used / {limit_pf}MB limit")  # вывод информации о файле подкачки
 
     # Кол-во логических процессоров
-    print("\nProcessors:", ctypes.windll.kernel32.GetCurrentProcessorNumber() + 1)  # номер текущего процессора + 1 = общее число логических процессоров
+    print("Processors:", get_cpu_count())
 
     # Диски
     print("Drives:")
