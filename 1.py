@@ -7,11 +7,11 @@ from ctypes import wintypes  # импорт типов данных Windows API 
 # Определяем структуру RTL_OSVERSIONINFOW, как в C
 class RTL_OSVERSIONINFOW(ctypes.Structure):
     _fields_ = [
-        ("dwOSVersionInfoSize", wintypes.DWORD),  # размер структуры (нужно заполнить перед вызовом)
-        ("dwMajorVersion", wintypes.DWORD),       # основная версия ОС (например 10 для Windows 10)
-        ("dwMinorVersion", wintypes.DWORD),       # минорная версия ОС
-        ("dwBuildNumber", wintypes.DWORD),        # номер сборки Windows
-        ("szCSDVersion", wintypes.WCHAR * 128)    # строка CSD (Service Pack или доп.инфо)
+        ("dwOSVersionInfoSize", wintypes.DWORD), # размер структуры (нужно заполнить перед вызовом)
+        ("dwMajorVersion", wintypes.DWORD),  # основная версия ОС (например 10 для Windows 10)
+        ("dwMinorVersion", wintypes.DWORD), # минорная версия ОС
+        ("dwBuildNumber", wintypes.DWORD), # номер сборки Windows
+        ("szCSDVersion", wintypes.WCHAR * 128) # строка CSD (Service Pack или доп.инфо)
     ]
 
 RtlGetVersion = ctypes.WinDLL("ntdll").RtlGetVersion  # получаем функцию RtlGetVersion из библиотеки ntdll.dll
@@ -165,7 +165,7 @@ def main():
     print("OS:", get_windows_version())  # печатаем строку версии ОС
     print("Computer Name:", platform.node())  # имя хоста/компьютера
     print("User:", platform.os.getenv('USERNAME'))  # имя текущего пользователя (через platform.os -> os)
-    print("Architecture:", platform.machine())  # архитектура Python (например '64bit')
+    print("Architecture:", platform.machine())  # архитектура процессора
 
     # Память
     mem = get_memory_info()  # получаем структуру с информацией о памяти
