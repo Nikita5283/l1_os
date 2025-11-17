@@ -43,20 +43,8 @@ class MEMORYSTATUSEX(ctypes.Structure):
 
 
 GlobalMemoryStatusEx = ctypes.windll.kernel32.GlobalMemoryStatusEx # Получаем ссылку на функцию WinAPI GlobalMemoryStatusEx из библиотеки kernel32.dll
-
-'''
-Устанавливаем атрибут argtypes — это список типов аргументов, которые ожидает функция.
-В данном случае указываем, что функция принимает один аргумент: указатель на структуру MEMORYSTATUSEX. ctypes.POINTER(MEMORYSTATUSEX) даёт ctypes информацию о том, как конвертировать/проверять передаваемый аргумент при вызове из Python (например, при вызове GlobalMemoryStatusEx(ctypes.byref(mem))).
-Правильная настройка argtypes помогает избежать ошибок маршалинга данных и позволяет ctypes автоматически преобразовать переданные объекты в нужный C-тип.
-'''
-GlobalMemoryStatusEx.argtypes = [ctypes.POINTER(MEMORYSTATUSEX)]
-
-'''
-Устанавливаем restype — тип возвращаемого значения функции. Здесь это wintypes.BOOL (обычно 0 — FALSE, ненулевое — TRUE).
-По умолчанию ctypes трактует возвращаемое значение как C int. Явное указание restype гарантирует, что возвращаемое значение будет правильно интерпретировано (и, при необходимости, преобразовано в Python-тип).
-Это важно, если вы планируете проверять успешность вызова (например, if not GlobalMemoryStatusEx(...):), или если функция возвращает указатель/структуру — тогда restype должен быть соответствующим (например, ctypes.c_void_p или указатель на структуру).
-'''
-GlobalMemoryStatusEx.restype = wintypes.BOOL
+GlobalMemoryStatusEx.argtypes = [ctypes.POINTER(MEMORYSTATUSEX)] # функция принимает указатель на нашу структуру
+GlobalMemoryStatusEx.restype = wintypes.BOOL  # указываем возвращаемый тип — BOOL (true/false)
 
 
 def get_memory_info():
@@ -162,28 +150,28 @@ def get_cpu_count():
 def main():
 
     # ОС
-    print("OS:", get_windows_version())  # печатаем строку версии ОС
-    print("Computer Name:", platform.node())  # имя хоста/компьютера
-    print("User:", platform.os.getenv('USERNAME'))  # имя текущего пользователя (через platform.os -> os)
-    print("Architecture:", platform.machine())  # архитектура процессора
+    print("OS:", get_windows_version())
+    print("Computer Name:", platform.node()) 
+    print("User:", platform.os.getenv('USERNAME')) 
+    print("Architecture:", platform.machine()) 
 
     # Память
-    mem = get_memory_info()  # получаем структуру с информацией о памяти
-    print(f"RAM: {(mem.ullTotalPhys - mem.ullAvailPhys)//(1024*1024)}MB used / {mem.ullTotalPhys//(1024*1024)}MB total")  # вывод используемой и общей RAM в МБ
-    print(f"Virtual Memory: {mem.ullTotalVirtual//(1024*1024)}MB")  # размер виртуальной памяти в МБ
-    print(f"Memory Load: {mem.dwMemoryLoad}%")  # процент загрузки памяти
+    mem = get_memory_info() 
+    print(f"RAM: {(mem.ullTotalPhys - mem.ullAvailPhys)//(1024*1024)}MB used / {mem.ullTotalPhys//(1024*1024)}MB total")
+    print(f"Virtual Memory: {mem.ullTotalVirtual//(1024*1024)}MB")
+    print(f"Memory Load: {mem.dwMemoryLoad}%") 
 
     # Файл подкачки
-    used_pf, limit_pf = get_pagefile_info()  # получаем использованный и лимит файла подкачки (в МБ)
-    print(f"Pagefile: {used_pf}MB used / {limit_pf}MB limit")  # вывод информации о файле подкачки
+    used_pf, limit_pf = get_pagefile_info() 
+    print(f"Pagefile: {used_pf}MB used / {limit_pf}MB limit") 
 
     # Кол-во логических процессоров
     print("Processors:", get_cpu_count())
 
     # Диски
     print("Drives:")
-    for d, free, total in get_drives():  # перебираем найденные диски
-        print(f"  - {d}: {free // (1024**3)} GB free / {total // (1024**3)} GB total")  # выводим свободное/общее место в ГБ
+    for d, free, total in get_drives():
+        print(f"  - {d}: {free // (1024**3)} GB free / {total // (1024**3)} GB total")
 
 if __name__ == "__main__":
-    main()  # запускаем main при прямом запуске скрипта
+    main()
